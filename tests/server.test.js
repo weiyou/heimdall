@@ -61,3 +61,10 @@ describe('preview server', () => {
     expect(res.status).toBe(404)
   })
 })
+
+describe('preview server error handling', () => {
+  it('rejects when the watched file does not exist at startup', async () => {
+    const badPath = join(tmpdir(), 'heimdall-nonexistent-' + Date.now() + '.md')
+    await expect(createPreviewServer(badPath)).rejects.toThrow(/not found|ENOENT/i)
+  })
+})

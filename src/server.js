@@ -9,6 +9,13 @@ export async function createPreviewServer(filePath, port = 0) {
   const clients = new Set()
   const sockets = new Set()
 
+  // Fail fast if the file cannot be read (clear error for CLI and tests)
+  try {
+    readFileSync(filePath, 'utf8')
+  } catch (err) {
+    throw new Error(`File not found: ${filePath} (${err.code || err.message})`)
+  }
+
   const stopWatcher = await watchFile(filePath, (content) => {
     const data = `data: ${JSON.stringify(renderMarkdown(content))}\n\n`
     for (const res of clients) res.write(data)
@@ -33,7 +40,7 @@ export async function createPreviewServer(filePath, port = 0) {
     if (req.url === '/' || req.url === '/index.html') {
       const html = renderMarkdown(readFileSync(filePath, 'utf8'))
       res.writeHead(200, { 'Content-Type': 'text/html' })
-      res.end(buildPage(html))
+      res.end(buildPage(html, filePath))
       return
     }
 
@@ -56,14 +63,30 @@ export async function createPreviewServer(filePath, port = 0) {
 
 // CLI entry
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const filePath = process.argv[2]
+  const argv = process.argv.slice(2)
+  let filePath = null
+  let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 7474
+
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]
+    if (a === '--port' || a === '-p') {
+      const v = argv[++i]
+      if (v && !v.startsWith('-')) port = parseInt(v, 10) || port
+    } else if (a.startsWith('--port=')) {
+      port = parseInt(a.split('=')[1], 10) || port
+    } else if (!a.startsWith('-') && !filePath) {
+      filePath = a
+    }
+  }
+
   if (!filePath) {
-    console.error('Usage: heimdall <file.md>')
+    console.error('Usage: heimdall <file.md> [--port <number> | -p <number>]')
+    console.error('       PORT=8080 heimdall <file.md>')
     process.exit(1)
   }
 
-  const { server } = await createPreviewServer(filePath, 7474)
-  const { port } = server.address()
+  const { server } = await createPreviewServer(filePath, port)
+  const { port: actualPort } = server.address()
   console.log(`Watching  ${filePath}`)
-  console.log(`Preview → http://localhost:${port}`)
+  console.log(`Preview → http://localhost:${actualPort}`)
 }
