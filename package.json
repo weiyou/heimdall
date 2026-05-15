@@ -1,0 +1,17 @@
+{
+  "name": "heimdall",
+  "version": "0.1.0",
+  "description": "Lightweight live markdown preview with SSE",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "node src/server.js"
+  },
+  "dependencies": {
+    "marked": "^14.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.0"
+  }
+}
