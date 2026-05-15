@@ -6,11 +6,15 @@ Lightweight live markdown preview for terminal editors. Point it at any `.md` fi
 
 - GitHub-flavored markdown rendered with `marked`
 - Live updates via SSE (~100 ms after save)
-- Dark mode toggle (☀️/🌙) with `prefers-color-scheme` support and `localStorage` persistence
+- **Syntax highlighting** with Prism.js (toggle button `⟨/⟩` or `?highlight=1` in URL)
+- Dark mode toggle (☀️/🌙) with `prefers-color-scheme` support, `localStorage` persistence, and Prism theme following
 - Always-visible header showing filename + "Last updated" timestamp (refreshes on every change)
 - Scroll position preserved across live content updates
+- Reconnection status banner when the SSE connection drops
 - Configurable port via `--port` / `-p` or `PORT` environment variable
 - Clear startup error if the watched file is missing or unreadable
+- Responsive design for mobile and small screens
+- Keyboard shortcuts for common actions
 
 ## Quick start
 
@@ -43,14 +47,25 @@ import { createPreviewServer } from './src/server.js'
 const { server, stop } = await createPreviewServer('./notes.md', 0) // port 0 = random
 ```
 
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `t` | Toggle dark / light mode |
+| `s` | Toggle syntax highlighting |
+| `?` or `/` | Show / hide help overlay |
+| `Esc` | Close help overlay |
+
 ## How live reload works
 
 The browser opens a persistent `EventSource` connection to `/events`. When the watched file changes, the server reads it, renders it to HTML with `marked`, and pushes a `data:` event over that stream. The page replaces the article content in-place.
 
 Additional UX details:
-- A small header bar always shows the current filename and a live "Last updated" timestamp.
+- A small header bar always shows the current filename and a live "Last updated" timestamp (centered).
+- Two toggle buttons on the right: dark mode (🌙/☀️) and syntax highlighting (⟨/⟩).
 - Scroll position is preserved on every update (you won't lose your place in long documents).
-- Dark mode toggle (top-right of the header) switches between GitHub light and dark themes and remembers your choice.
+- Reconnection status banner appears if the SSE connection is lost.
+- Dark mode and syntax highlighting themes stay in sync.
 - The server fails fast with a clear error message if the target file does not exist.
 
 File watching uses Node's built-in `fs.watchFile` at 100ms polling; no native FSEvents dependency.
@@ -59,6 +74,7 @@ File watching uses Node's built-in `fs.watchFile` at 100ms polling; no native FS
 
 - **[marked](https://marked.js.org)** — GFM markdown rendering
 - **[github-markdown-css](https://github.com/sindresorhus/github-markdown-css)** — stylesheet (CDN)
+- **[Prism.js](https://prismjs.com)** — syntax highlighting (loaded on demand via CDN)
 - **[Vitest](https://vitest.dev)** — test runner
 - Node.js built-ins for HTTP, file watching, and SSE
 
