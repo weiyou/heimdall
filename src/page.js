@@ -1,7 +1,9 @@
 import { basename } from 'node:path'
 
-const CSS_LIGHT = 'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.6.1/github-markdown.min.css'
-const CSS_DARK = 'https://cdn.jsdelivr.net/npm/github-markdown-css@5.6.1/github-markdown-dark.min.css'
+// GitHub stylesheets are served locally by the server (see server.js) so the
+// preview renders correctly even with no internet connection.
+const CSS_LIGHT = '/css/github-markdown-light.css'
+const CSS_DARK = '/css/github-markdown-dark.css'
 
 export function buildPage(html, filePath = '') {
   const name = filePath ? basename(filePath) : 'Untitled'
@@ -17,14 +19,22 @@ export function buildPage(html, filePath = '') {
   <link rel="stylesheet" href="${CSS_DARK}" id="css-dark" media="(prefers-color-scheme: dark)">
   <style>
     /* Match GitHub repository README rendering when sidebars are visible.
-       After testing, max-width: 908px + 45px padding on each side produces
-       line wrapping behavior that closely matches GitHub's main repo view.
-       The github-markdown-css package recommends 980px, but GitHub's actual
-       layout (with sidebars) results in a narrower effective content width. */
-    body { box-sizing: border-box; max-width: 908px; margin: 0 auto; padding: 45px; }
+       908px max-width + 45px side padding reproduces GitHub's effective
+       content width (the package's 980px is wider than the real repo view). */
+    body { box-sizing: border-box; max-width: 908px; margin: 0 auto; padding: 0 45px 45px; }
+
+    /* Sticky header — stays visible so the live "Last updated" time and the
+       theme toggle remain reachable while scrolling long documents. The body
+       has no top padding; the header's own padding-top supplies the gap and
+       keeps an opaque background covering content scrolling underneath. */
     #meta {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: #ffffff;
       display: flex;
       align-items: center;
+      padding-top: 14px;
       margin-bottom: 1rem;
       padding-bottom: 0.5rem;
       border-bottom: 1px solid #eaecef;
@@ -44,8 +54,19 @@ export function buildPage(html, filePath = '') {
       opacity: 0.8;
     }
 
+    /* Brief pulse on the timestamp confirms a save was picked up, even when
+       the changed content itself is scrolled off-screen. */
+    #last-updated.flash { animation: heimdall-flash 0.7s ease-out; }
+    @keyframes heimdall-flash {
+      0%   { color: #2da44e; font-weight: 600; }
+      100% { color: inherit; font-weight: inherit; }
+    }
+
     .meta-controls {
       flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
 
     /* GitHub-style code blocks with Shiki (dual themes + custom background).
@@ -75,6 +96,7 @@ export function buildPage(html, filePath = '') {
       background-color: #161b22;
     }
 
+    /* Status banner — connection state and render errors. Colour by data-type. */
     .status {
       margin: -0.5rem 0 1rem;
       padding: 6px 12px;
@@ -85,18 +107,31 @@ export function buildPage(html, filePath = '') {
       color: #664d03;
       border: 1px solid #ffe69c;
     }
+    .status[data-type="success"] { background: #d1e7dd; color: #0a3622; border-color: #a3cfbb; }
+    .status[data-type="error"]   { background: #ffebe9; color: #82071e; border-color: #ffaba8; }
     @media (prefers-color-scheme: dark) {
-      .status {
-        background: #3d2a00;
-        color: #f0c36b;
-        border-color: #664d03;
-      }
+      .status { background: #3d2a00; color: #f0c36b; border-color: #664d03; }
+      .status[data-type="success"] { background: #0f2e1d; color: #6fce9a; border-color: #1d5a38; }
+      .status[data-type="error"]   { background: #3a0d10; color: #ff9492; border-color: #6e2528; }
     }
-    html.dark .status {
-      background: #3d2a00;
-      color: #f0c36b;
-      border-color: #664d03;
+    html.dark .status { background: #3d2a00; color: #f0c36b; border-color: #664d03; }
+    html.dark .status[data-type="success"] { background: #0f2e1d; color: #6fce9a; border-color: #1d5a38; }
+    html.dark .status[data-type="error"]   { background: #3a0d10; color: #ff9492; border-color: #6e2528; }
+
+    /* Render error shown inside the article when the document itself is invalid. */
+    .render-error {
+      padding: 12px 16px;
+      border-radius: 6px;
+      background: #ffebe9;
+      color: #82071e;
+      border: 1px solid #ffaba8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
     }
+    @media (prefers-color-scheme: dark) {
+      .render-error { background: #3a0d10; color: #ff9492; border-color: #6e2528; }
+    }
+    html.dark .render-error { background: #3a0d10; color: #ff9492; border-color: #6e2528; }
 
     /* System (auto) dark theme via prefers-color-scheme — applies when no manual choice */
     @media (prefers-color-scheme: dark) {
@@ -133,11 +168,6 @@ export function buildPage(html, filePath = '') {
     html.dark #meta #updated {
       color: #c9d1d9;
     }
-    .meta-controls {
-      display: flex;
-      align-items: center;
-      gap: 5px;                    /* ~ quarter button width separation */
-    }
 
     #theme-toggle {
       width: 26px;
@@ -164,7 +194,7 @@ export function buildPage(html, filePath = '') {
     /* Responsive / mobile-friendly styles */
     @media (max-width: 700px) {
       body {
-        padding: 16px;
+        padding: 0 16px 16px;
       }
       #meta {
         flex-wrap: wrap;
@@ -183,7 +213,7 @@ export function buildPage(html, filePath = '') {
 
     @media (max-width: 400px) {
       body {
-        padding: 10px;
+        padding: 0 10px 10px;
       }
       #meta {
         font-size: 10px;
@@ -191,7 +221,7 @@ export function buildPage(html, filePath = '') {
     }
 
     .help {
-      position: absolute;
+      position: fixed;
       top: 60px;
       right: 16px;
       z-index: 100;
@@ -201,7 +231,7 @@ export function buildPage(html, filePath = '') {
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       padding: 10px 14px;
       font-size: 12px;
-      line-height: 1.5;
+      line-height: 1.6;
       color: #24292f;
     }
     @media (prefers-color-scheme: dark) {
@@ -244,13 +274,15 @@ export function buildPage(html, filePath = '') {
   <div id="status" class="status" hidden></div>
   <div id="help" class="help" hidden>
     <div class="help-content">
-      <strong>Shortcuts</strong><br>
-      <kbd>t</kbd> — Toggle theme<br>
-      <kbd>?</kbd> — Toggle this help
+      <strong>Keyboard shortcuts</strong><br>
+      <kbd>t</kbd> — Toggle dark / light theme<br>
+      <kbd>?</kbd> or <kbd>/</kbd> — Toggle this help<br>
+      <kbd>Esc</kbd> — Close this help
     </div>
   </div>
   <article class="markdown-body" id="content">${html}</article>
   <script>
+    // ----- Theme handling -----
     (function () {
       const lightLink = document.getElementById('css-light')
       const darkLink = document.getElementById('css-dark')
@@ -258,13 +290,11 @@ export function buildPage(html, filePath = '') {
       const root = document.documentElement
       const mediaDark = window.matchMedia('(prefers-color-scheme: dark)')
 
-      // Determine if user has made an explicit manual choice
       function hasManualChoice() {
         const saved = localStorage.getItem('heimdall-theme')
         return saved === 'dark' || saved === 'light'
       }
 
-      // Get the effective theme (respect manual choice, otherwise system)
       function getEffectiveTheme() {
         const saved = localStorage.getItem('heimdall-theme')
         if (saved === 'dark' || saved === 'light') return saved
@@ -274,7 +304,6 @@ export function buildPage(html, filePath = '') {
       // Apply a forced (manual) theme — removes media attributes so the choice sticks
       function forceTheme(theme) {
         const isDark = theme === 'dark'
-        // Remove media attributes so the chosen stylesheet stays active regardless of system
         lightLink.removeAttribute('media')
         darkLink.removeAttribute('media')
         lightLink.disabled = isDark
@@ -284,118 +313,119 @@ export function buildPage(html, filePath = '') {
         toggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode')
       }
 
-      // Let the browser/media queries handle everything (no manual override active)
+      // Let the browser/media queries decide (no manual override active)
       function useSystemTheme() {
-        // Restore media attributes so GitHub CSS follows system natively
         lightLink.setAttribute('media', '(prefers-color-scheme: light)')
         darkLink.setAttribute('media', '(prefers-color-scheme: dark)')
-        // Do not disable either link — browser decides
         lightLink.disabled = false
         darkLink.disabled = false
-        // Remove any previous manual class
         root.classList.remove('dark')
-        // Show icon for the *opposite* of current effective system theme
         const effectiveIsDark = mediaDark.matches
         toggle.textContent = effectiveIsDark ? '☀️' : '🌙'
         toggle.setAttribute('aria-label', effectiveIsDark ? 'Switch to light mode' : 'Switch to dark mode')
       }
 
-      // Initialize on load
       if (hasManualChoice()) {
-        const saved = localStorage.getItem('heimdall-theme')
-        forceTheme(saved)
+        forceTheme(localStorage.getItem('heimdall-theme'))
       } else {
         useSystemTheme()
       }
 
-      // Toggle always creates/saves a manual choice
       toggle.addEventListener('click', () => {
         const newTheme = getEffectiveTheme() === 'dark' ? 'light' : 'dark'
         localStorage.setItem('heimdall-theme', newTheme)
         forceTheme(newTheme)
       })
 
-      // When system preference changes and we are *not* in manual mode,
-      // update the toggle icon to reflect the new effective theme.
       mediaDark.addEventListener('change', () => {
-        if (!hasManualChoice()) {
-          useSystemTheme()
-        }
+        if (!hasManualChoice()) useSystemTheme()
       })
     })()
 
+    // ----- Live updates over SSE -----
     const statusEl = document.getElementById('status')
-    const es = new EventSource('/events')
+    const contentEl = document.getElementById('content')
+    const updatedEl = document.getElementById('last-updated')
+    const baseTitle = document.title
+    let failures = 0
 
-    function showStatus(msg, type = 'warning') {
+    function showStatus(msg, type) {
       statusEl.hidden = false
       statusEl.textContent = msg
-      if (type === 'success') {
-        statusEl.style.background = '#d1e7dd'
-        statusEl.style.color = '#0a3622'
-        statusEl.style.borderColor = '#a3cfbb'
-      } else {
-        statusEl.style.background = ''
-        statusEl.style.color = ''
-        statusEl.style.borderColor = ''
-      }
+      statusEl.dataset.type = type || 'warning'
     }
-
     function hideStatus() {
       statusEl.hidden = true
+      statusEl.removeAttribute('data-type')
+    }
+    function flashTimestamp() {
+      updatedEl.classList.remove('flash')
+      void updatedEl.offsetWidth   // force reflow so the animation restarts
+      updatedEl.classList.add('flash')
     }
 
+    // Clear the background-tab marker once the user looks at the page again
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) document.title = baseTitle
+    })
+
+    const es = new EventSource('/events')
+
     es.onopen = () => {
-      // Successful (re)connection
-      if (!statusEl.hidden) {
+      if (failures > 0) {
         showStatus('Reconnected', 'success')
-        setTimeout(hideStatus, 1200)
+        setTimeout(() => { if (statusEl.dataset.type === 'success') hideStatus() }, 1200)
       }
+      failures = 0
     }
 
     es.onerror = () => {
-      showStatus('Connection lost — reconnecting…')
+      failures++
+      if (failures >= 5) {
+        showStatus('Server stopped — restart heimdall to resume live updates.', 'error')
+      } else {
+        showStatus('Connection lost — reconnecting…', 'warning')
+      }
     }
 
-    es.onmessage = e => {
+    es.onmessage = (e) => {
+      const msg = JSON.parse(e.data)
+
+      // A render failure: keep the last good content, surface the error.
+      if (msg.type === 'error') {
+        showStatus('⚠ Render error: ' + msg.message, 'error')
+        return
+      }
+
+      // Successful render — clear any stale render-error banner.
+      if (statusEl.dataset.type === 'error') hideStatus()
+
       const y = document.documentElement.scrollTop || document.body.scrollTop
-      document.getElementById('content').innerHTML = JSON.parse(e.data)
-      const t = document.getElementById('last-updated')
-      if (t) t.textContent = new Date().toLocaleTimeString()
+      contentEl.innerHTML = msg.html
+      updatedEl.textContent = new Date().toLocaleTimeString()
+      flashTimestamp()
+      if (document.hidden) document.title = '● ' + baseTitle
       requestAnimationFrame(() => {
         document.documentElement.scrollTop = document.body.scrollTop = y
       })
     }
 
-    // Keyboard shortcuts
+    // ----- Keyboard shortcuts -----
     const helpEl = document.getElementById('help')
     const themeBtn = document.getElementById('theme-toggle')
 
     document.addEventListener('keydown', (e) => {
-      if (e.key.toLowerCase() === 't' && !e.target.matches('input, textarea')) {
+      if (e.target.matches('input, textarea')) return
+      if (e.key.toLowerCase() === 't') {
         e.preventDefault()
         if (themeBtn) themeBtn.click()
-      }
-      if ((e.key === '?' || e.key === '/') && !e.target.matches('input, textarea')) {
+      } else if (e.key === '?' || e.key === '/') {
         e.preventDefault()
         helpEl.hidden = !helpEl.hidden
-      }
-      if (e.key === 'Escape' && !helpEl.hidden) {
+      } else if (e.key === 'Escape' && !helpEl.hidden) {
         helpEl.hidden = true
       }
     })
-
-    // Server now delivers fully highlighted HTML (via Shiki + GitHub themes).
-    // No client-side highlighting or toggle needed — content updates are simple.
-    es.onmessage = (e) => {
-      const y = document.documentElement.scrollTop || document.body.scrollTop
-      document.getElementById('content').innerHTML = JSON.parse(e.data)
-      const t = document.getElementById('last-updated')
-      if (t) t.textContent = new Date().toLocaleTimeString()
-      requestAnimationFrame(() => {
-        document.documentElement.scrollTop = document.body.scrollTop = y
-      })
-    }
   </script>
 </body>
 </html>`

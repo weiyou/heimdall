@@ -28,7 +28,7 @@ describe('preview server', () => {
 
   it('GET / body contains the rendered markdown', async () => {
     const body = await fetch(`http://localhost:${port}/`).then(r => r.text())
-    expect(body).toContain('<h1>Hello</h1>')
+    expect(body).toContain('>Hello</h1>')
     expect(body).toContain('<!DOCTYPE html>')
   })
 
@@ -50,7 +50,8 @@ describe('preview server', () => {
       const { value } = await reader.read()
       const text = new TextDecoder().decode(value)
       expect(text).toMatch(/^data:/)
-      expect(text).toContain('<h1>Hello</h1>')
+      expect(text).toContain('"type":"content"')
+      expect(text).toContain('>Hello</h1>')
     } finally {
       controller.abort()
     }
@@ -60,11 +61,44 @@ describe('preview server', () => {
     const res = await fetch(`http://localhost:${port}/unknown`)
     expect(res.status).toBe(404)
   })
+
+  it('GET /favicon.ico returns 204 instead of a 404', async () => {
+    const res = await fetch(`http://localhost:${port}/favicon.ico`)
+    expect(res.status).toBe(204)
+  })
+
+  it('serves the bundled GitHub stylesheet locally', async () => {
+    const res = await fetch(`http://localhost:${port}/css/github-markdown-light.css`)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toContain('text/css')
+    expect(await res.text()).toContain('.markdown-body')
+  })
+
+  it('ignores query strings when routing', async () => {
+    const res = await fetch(`http://localhost:${port}/?t=123`)
+    expect(res.status).toBe(200)
+  })
 })
 
 describe('preview server error handling', () => {
   it('rejects when the watched file does not exist at startup', async () => {
     const badPath = join(tmpdir(), 'heimdall-nonexistent-' + Date.now() + '.md')
     await expect(createPreviewServer(badPath)).rejects.toThrow(/not found|ENOENT/i)
+  })
+
+  it('rejects with EADDRINUSE when the port is already taken', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'heimdall-'))
+    const file = join(dir, 'test.md')
+    writeFileSync(file, '# Hi')
+    const first = await createPreviewServer(file)
+    const takenPort = first.server.address().port
+    try {
+      await expect(createPreviewServer(file, takenPort)).rejects.toMatchObject({
+        code: 'EADDRINUSE',
+      })
+    } finally {
+      await first.stop()
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

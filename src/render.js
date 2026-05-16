@@ -1,5 +1,6 @@
 import { Marked } from 'marked'
 import markedShiki from 'marked-shiki'
+import { gfmHeadingId } from 'marked-gfm-heading-id'
 import { createHighlighter } from 'shiki'
 
 function escapeHtml(str) {
@@ -18,6 +19,8 @@ const highlighter = await createHighlighter({
 })
 
 const marked = new Marked().use(
+  // Add GitHub-style id="" anchors to headings so links/#fragments work
+  gfmHeadingId(),
   markedShiki({
     async highlight(code, lang = 'text') {
       // Try to load unknown languages on demand for maximum compatibility
@@ -25,8 +28,9 @@ const marked = new Marked().use(
         try {
           await highlighter.loadLanguage(lang)
         } catch {
-          // Unsupported language — graceful fallback (plain code block)
-          return `<pre><code>${escapeHtml(code)}</code></pre>`
+          // Unsupported language — graceful fallback. Keep the .shiki class so
+          // the block still gets GitHub's shaded background from page.js CSS.
+          return `<pre class="shiki"><code>${escapeHtml(code)}</code></pre>`
         }
       }
 

@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { renderMarkdown } from '../src/render.js'
 
 describe('renderMarkdown', () => {
-  it('renders ATX headers', async () => {
-    expect(await renderMarkdown('# Hello')).toContain('<h1>Hello</h1>')
+  it('renders ATX headers with GitHub-style id anchors', async () => {
+    const html = await renderMarkdown('# Hello World')
+    expect(html).toContain('<h1 id="hello-world"')
+    expect(html).toContain('>Hello World</h1>')
   })
 
   it('renders unordered lists', async () => {
@@ -29,5 +31,11 @@ describe('renderMarkdown', () => {
 
   it('returns empty string for empty input', async () => {
     expect(await renderMarkdown('')).toBe('')
+  })
+
+  it('falls back to a .shiki code block for unknown languages', async () => {
+    const html = await renderMarkdown('```not-a-real-lang\nx = 1\n```')
+    expect(html).toContain('<pre class="shiki"><code>')
+    expect(html).toContain('x = 1')
   })
 })

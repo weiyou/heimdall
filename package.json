@@ -9,7 +9,9 @@
     "dev": "node src/server.js"
   },
   "dependencies": {
+    "github-markdown-css": "^5.9.0",
     "marked": "^14.0.0",
+    "marked-gfm-heading-id": "^4.1.4",
     "marked-shiki": "^1.2.1",
     "shiki": "^4.0.2"
   },
