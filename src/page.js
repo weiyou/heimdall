@@ -16,7 +16,12 @@ export function buildPage(html, filePath = '') {
   <link rel="stylesheet" href="${CSS_LIGHT}" id="css-light" media="(prefers-color-scheme: light)">
   <link rel="stylesheet" href="${CSS_DARK}" id="css-dark" media="(prefers-color-scheme: dark)">
   <style>
-    body { box-sizing: border-box; max-width: 980px; margin: 0 auto; padding: 45px; }
+    /* Match GitHub repository README rendering when sidebars are visible.
+       After testing, max-width: 908px + 45px padding on each side produces
+       line wrapping behavior that closely matches GitHub's main repo view.
+       The github-markdown-css package recommends 980px, but GitHub's actual
+       layout (with sidebars) results in a narrower effective content width. */
+    body { box-sizing: border-box; max-width: 908px; margin: 0 auto; padding: 45px; }
     #meta {
       display: flex;
       align-items: center;
@@ -43,23 +48,31 @@ export function buildPage(html, filePath = '') {
       flex: 0 0 auto;
     }
 
-    /* GitHub uses 85% on code blocks. Prism's theme applies font-size: 1em
-       once it adds language-* classes to <pre> and <code>. We override both
-       with GitHub's exact values, scoped to pre[class*="language-*"] so the
-       rules only apply after Prism has processed the block (marked adds the
-       class to <code> even for non-highlighted blocks; only Prism adds it to <pre>). */
-    .markdown-body pre[class*="language-"] {
-      font-family: var(--fontStack-monospace, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace);
-      font-size: 85%;
-      line-height: 1.45;
-      padding: 16px;
-      margin-top: 0;
-      margin-bottom: 16px;
+    /* GitHub-style code blocks with Shiki (dual themes + custom background).
+       defaultColor:false in Shiki removes inline colors, so we drive everything via CSS vars. */
+    .markdown-body .shiki,
+    .markdown-body .shiki span {
+      color: var(--shiki-light);
     }
-    .markdown-body pre[class*="language-"] code {
-      font-family: inherit;
-      font-size: 100%;
-      line-height: inherit;
+    .markdown-body .shiki {
+      background-color: #f6f8fa;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .markdown-body .shiki,
+      .markdown-body .shiki span {
+        color: var(--shiki-dark) !important;
+      }
+      .markdown-body .shiki {
+        background-color: #161b22;
+      }
+    }
+    html.dark .markdown-body .shiki,
+    html.dark .markdown-body .shiki span {
+      color: var(--shiki-dark) !important;
+    }
+    html.dark .markdown-body .shiki {
+      background-color: #161b22;
     }
 
     .status {
@@ -126,8 +139,7 @@ export function buildPage(html, filePath = '') {
       gap: 5px;                    /* ~ quarter button width separation */
     }
 
-    #theme-toggle,
-    #highlight-toggle {
+    #theme-toggle {
       width: 26px;
       height: 26px;
       padding: 0;
@@ -141,16 +153,13 @@ export function buildPage(html, filePath = '') {
       border-radius: 6px;
       cursor: pointer;
     }
-    #theme-toggle:hover,
-    #highlight-toggle:hover { background: #f6f8fa; }
+    #theme-toggle:hover { background: #f6f8fa; }
 
-    html.dark #theme-toggle,
-    html.dark #highlight-toggle {
+    html.dark #theme-toggle {
       border-color: #30363d;
       color: #c9d1d9;
     }
-    html.dark #theme-toggle:hover,
-    html.dark #highlight-toggle:hover { background: #21262d; }
+    html.dark #theme-toggle:hover { background: #21262d; }
 
     /* Responsive / mobile-friendly styles */
     @media (max-width: 700px) {
@@ -230,7 +239,6 @@ export function buildPage(html, filePath = '') {
     <span id="updated">Last updated: <time id="last-updated">${initialTime}</time></span>
     <div class="meta-controls">
       <button id="theme-toggle" title="Toggle dark mode (t)" aria-label="Toggle theme">🌙</button>
-      <button id="highlight-toggle" title="Toggle syntax highlighting (s)" aria-label="Toggle syntax highlighting">⟨/⟩</button>
     </div>
   </header>
   <div id="status" class="status" hidden></div>
@@ -238,9 +246,7 @@ export function buildPage(html, filePath = '') {
     <div class="help-content">
       <strong>Shortcuts</strong><br>
       <kbd>t</kbd> — Toggle theme<br>
-      <kbd>?</kbd> — Toggle this help<br>
-      <kbd>s</kbd> — Toggle syntax highlighting<br>
-      <span class="help-note">(Prism.js loaded on demand)</span>
+      <kbd>?</kbd> — Toggle this help
     </div>
   </div>
   <article class="markdown-body" id="content">${html}</article>
@@ -364,7 +370,6 @@ export function buildPage(html, filePath = '') {
     // Keyboard shortcuts
     const helpEl = document.getElementById('help')
     const themeBtn = document.getElementById('theme-toggle')
-    const highlightBtn = document.getElementById('highlight-toggle')
 
     document.addEventListener('keydown', (e) => {
       if (e.key.toLowerCase() === 't' && !e.target.matches('input, textarea')) {
@@ -375,183 +380,21 @@ export function buildPage(html, filePath = '') {
         e.preventDefault()
         helpEl.hidden = !helpEl.hidden
       }
-      if (e.key.toLowerCase() === 's' && !e.target.matches('input, textarea')) {
-        e.preventDefault()
-        if (highlightBtn) highlightBtn.click()
-      }
       if (e.key === 'Escape' && !helpEl.hidden) {
         helpEl.hidden = true
       }
     })
 
-    // === Syntax highlighting with Prism.js (opt-in via ?highlight or toggle) ===
-    let prismLoaded = false
-    let prismCssLink = null
-    let highlightingEnabled = false
-    let latestCleanHtml = ''
-
-    // Capture the initial server-rendered content as our clean baseline
-    const initialContent = document.getElementById('content')
-    if (initialContent) {
-      latestCleanHtml = initialContent.innerHTML
-    }
-
-    const urlParams = new URLSearchParams(location.search)
-    const highlightFromUrl = urlParams.has('highlight') || urlParams.get('highlight') === '1'
-    const highlightFromStorage = localStorage.getItem('heimdall-highlight') === 'on'
-
-    function getPrismThemeUrl() {
-      const isDark = document.documentElement.classList.contains('dark') ||
-                     (!localStorage.getItem('heimdall-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
-      return isDark
-        ? 'https://cdn.jsdelivr.net/npm/prismjs@1/themes/prism-tomorrow.min.css'
-        : 'https://cdn.jsdelivr.net/npm/prismjs@1/themes/prism.min.css'
-    }
-
-    async function loadPrism() {
-      if (prismLoaded) return
-      return new Promise((resolve) => {
-        // Load the correct Prism theme for current page theme
-        prismCssLink = document.createElement('link')
-        prismCssLink.rel = 'stylesheet'
-        prismCssLink.href = getPrismThemeUrl()
-        prismCssLink.disabled = !highlightingEnabled   // respect current state
-        document.head.appendChild(prismCssLink)
-
-        const scriptCore = document.createElement('script')
-        scriptCore.src = 'https://cdn.jsdelivr.net/npm/prismjs@1/prism.min.js'
-        scriptCore.onload = () => {
-          const scriptAutoloader = document.createElement('script')
-          scriptAutoloader.src = 'https://cdn.jsdelivr.net/npm/prismjs@1/plugins/autoloader/prism-autoloader.min.js'
-          scriptAutoloader.onload = () => {
-            prismLoaded = true
-            resolve()
-          }
-          document.head.appendChild(scriptAutoloader)
-        }
-        document.head.appendChild(scriptCore)
-      })
-    }
-
-    function switchPrismTheme() {
-      if (prismCssLink && highlightingEnabled && window.Prism) {
-        prismCssLink.href = getPrismThemeUrl()
-        const content = document.getElementById('content')
-        if (content && latestCleanHtml) {
-          // Re-apply highlighting with the new theme
-          content.innerHTML = latestCleanHtml
-          Prism.highlightAllUnder(content)
-        }
-      }
-    }
-
-    function setHighlightState(enabled) {
-      highlightingEnabled = enabled
-      localStorage.setItem('heimdall-highlight', enabled ? 'on' : 'off')
-      if (highlightBtn) {
-        highlightBtn.style.background = enabled ? '#ddf4ff' : ''
-        highlightBtn.style.borderColor = enabled ? '#0969da' : ''
-      }
-    }
-
-    function applyContent(html, highlight = highlightingEnabled) {
-      const content = document.getElementById('content')
-      if (!content) return
-
-      latestCleanHtml = html
-      content.innerHTML = html
-
-      if (highlight && window.Prism) {
-        Prism.highlightAllUnder(content)
-      }
-    }
-
-    async function enableHighlighting() {
-      const content = document.getElementById('content')
-      if (!content || !latestCleanHtml) return
-
-      await loadPrism()
-      if (window.Prism && prismCssLink) {
-        prismCssLink.href = getPrismThemeUrl()
-        prismCssLink.disabled = false
-        content.innerHTML = latestCleanHtml
-        Prism.highlightAllUnder(content)
-      }
-    }
-
-    function disableHighlighting() {
-      const content = document.getElementById('content')
-      if (content && latestCleanHtml) {
-        if (prismCssLink) {
-          prismCssLink.disabled = true
-        }
-        content.innerHTML = latestCleanHtml
-      }
-    }
-
-    async function toggleHighlight() {
-      const newState = !highlightingEnabled
-      setHighlightState(newState)
-
-      if (newState) {
-        await enableHighlighting()
-      } else {
-        disableHighlighting()
-      }
-    }
-
-    // Initialize highlighting state
-    if (highlightFromUrl || highlightFromStorage) {
-      setHighlightState(true)
-    }
-
-    if (highlightBtn) {
-      highlightBtn.addEventListener('click', toggleHighlight)
-    }
-
-    // React to theme changes (manual or system) while highlighting is active
-    // Use MutationObserver so we don't have to modify the theme IIFE
-    const observer = new MutationObserver(() => {
-      if (highlightingEnabled) {
-        switchPrismTheme()
-      }
-    })
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-
-    // Also listen to system changes in auto mode
-    mediaDark.addEventListener('change', () => {
-      if (!hasManualChoice() && highlightingEnabled) {
-        switchPrismTheme()
-      }
-    })
-
-    // === Core content update handler (always keeps a clean copy) ===
-    // We override the onmessage to ensure we always have the latest clean HTML
-    const originalOnMessage = es.onmessage
+    // Server now delivers fully highlighted HTML (via Shiki + GitHub themes).
+    // No client-side highlighting or toggle needed — content updates are simple.
     es.onmessage = (e) => {
-      const rawHtml = JSON.parse(e.data)
-      applyContent(rawHtml, highlightingEnabled)  // this also updates latestCleanHtml
-
-      // Update timestamp + scroll (from original logic)
+      const y = document.documentElement.scrollTop || document.body.scrollTop
+      document.getElementById('content').innerHTML = JSON.parse(e.data)
       const t = document.getElementById('last-updated')
       if (t) t.textContent = new Date().toLocaleTimeString()
-
-      const y = document.documentElement.scrollTop || document.body.scrollTop
       requestAnimationFrame(() => {
         document.documentElement.scrollTop = document.body.scrollTop = y
       })
-    }
-
-    // Initial content handling (first SSE push)
-    // The first message will go through the new handler above.
-    // If highlighting should be on from the start, enable it after first content arrives.
-    if (highlightingEnabled) {
-      // Small delay to let the very first message populate latestCleanHtml
-      setTimeout(async () => {
-        if (latestCleanHtml) {
-          await enableHighlighting()
-        }
-      }, 120)
     }
   </script>
 </body>

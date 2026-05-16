@@ -9,7 +9,9 @@
     "dev": "node src/server.js"
   },
   "dependencies": {
-    "marked": "^14.0.0"
+    "marked": "^14.0.0",
+    "marked-shiki": "^1.2.1",
+    "shiki": "^4.0.2"
   },
   "devDependencies": {
     "vitest": "^4.0.0"
