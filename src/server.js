@@ -16,12 +16,13 @@ export async function createPreviewServer(filePath, port = 0) {
     throw new Error(`File not found: ${filePath} (${err.code || err.message})`)
   }
 
-  const stopWatcher = await watchFile(filePath, (content) => {
-    const data = `data: ${JSON.stringify(renderMarkdown(content))}\n\n`
+  const stopWatcher = await watchFile(filePath, async (content) => {
+    const html = await renderMarkdown(content)
+    const data = `data: ${JSON.stringify(html)}\n\n`
     for (const res of clients) res.write(data)
   })
 
-  const server = createServer((req, res) => {
+  const server = createServer(async (req, res) => {
     if (req.url === '/events') {
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
@@ -32,13 +33,13 @@ export async function createPreviewServer(filePath, port = 0) {
       clients.add(res)
       req.on('close', () => clients.delete(res))
 
-      const html = renderMarkdown(readFileSync(filePath, 'utf8'))
+      const html = await renderMarkdown(readFileSync(filePath, 'utf8'))
       res.write(`data: ${JSON.stringify(html)}\n\n`)
       return
     }
 
     if (req.url === '/' || req.url === '/index.html') {
-      const html = renderMarkdown(readFileSync(filePath, 'utf8'))
+      const html = await renderMarkdown(readFileSync(filePath, 'utf8'))
       res.writeHead(200, { 'Content-Type': 'text/html' })
       res.end(buildPage(html, filePath))
       return
