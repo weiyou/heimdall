@@ -16,7 +16,12 @@ export function buildPage(html, filePath = '') {
   <link rel="stylesheet" href="${CSS_LIGHT}" id="css-light" media="(prefers-color-scheme: light)">
   <link rel="stylesheet" href="${CSS_DARK}" id="css-dark" media="(prefers-color-scheme: dark)">
   <style>
-    body { box-sizing: border-box; max-width: 980px; margin: 0 auto; padding: 45px; }
+    /* Match GitHub repository README rendering when sidebars are visible.
+       After testing, max-width: 908px + 45px padding on each side produces
+       line wrapping behavior that closely matches GitHub's main repo view.
+       The github-markdown-css package recommends 980px, but GitHub's actual
+       layout (with sidebars) results in a narrower effective content width. */
+    body { box-sizing: border-box; max-width: 908px; margin: 0 auto; padding: 45px; }
     #meta {
       display: flex;
       align-items: center;
