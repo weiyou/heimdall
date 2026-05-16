@@ -43,10 +43,24 @@ export function buildPage(html, filePath = '') {
       flex: 0 0 auto;
     }
 
-    /* Only shrink the text inside Prism-highlighted code (when syntax is enabled).
-       Plain (non-highlighted) code blocks keep GitHub's original larger size. */
-    .markdown-body .token {
-      font-size: 0.80em;
+    /* When Prism highlights a block it copies a \`language-*\` class onto the
+       <pre> (and <code>), so Prism's theme CSS takes over font sizing — its
+       \`font-size: 1em\` renders highlighted blocks larger than GitHub's plain
+       ones (which use 85%). Restate GitHub's exact code-block typography here
+       with higher specificity than Prism's selectors so highlighted and
+       non-highlighted blocks render identically. */
+    .markdown-body pre[class*="language-"] {
+      font-family: var(--fontStack-monospace, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace);
+      font-size: 85%;
+      line-height: 1.45;
+      padding: 16px;
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+    .markdown-body code[class*="language-"] {
+      font-family: monospace;
+      font-size: 100%;
+      line-height: inherit;
     }
 
     .status {
