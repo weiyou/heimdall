@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { writeFileSync, mkdtempSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { createPreviewServer } from '../src/server.js'
+import { createPreviewServer, browserCommand } from '../src/server.js'
 
 describe('preview server', () => {
   let tmpDir, filePath, server, port, stop
@@ -100,5 +100,53 @@ describe('preview server error handling', () => {
       await first.stop()
       rmSync(dir, { recursive: true, force: true })
     }
+  })
+})
+
+describe('browserCommand', () => {
+  const url = 'http://localhost:7474'
+
+  it('uses the OS default when no browser is requested (darwin)', () => {
+    expect(browserCommand(url, undefined, 'darwin')).toEqual({ cmd: 'open', args: [url] })
+  })
+
+  it('opens Safari by app name on darwin', () => {
+    expect(browserCommand(url, 'safari', 'darwin')).toEqual({
+      cmd: 'open',
+      args: ['-a', 'Safari', url],
+    })
+  })
+
+  it('opens Brave by app name on darwin', () => {
+    expect(browserCommand(url, 'brave', 'darwin')).toEqual({
+      cmd: 'open',
+      args: ['-a', 'Brave Browser', url],
+    })
+  })
+
+  it('maps brave to brave-browser on linux', () => {
+    expect(browserCommand(url, 'brave', 'linux')).toEqual({
+      cmd: 'brave-browser',
+      args: [url],
+    })
+  })
+
+  it('falls back to xdg-open for the default browser on linux', () => {
+    expect(browserCommand(url, undefined, 'linux')).toEqual({
+      cmd: 'xdg-open',
+      args: [url],
+    })
+  })
+
+  it('opens Brave via start on win32', () => {
+    expect(browserCommand(url, 'brave', 'win32')).toEqual({
+      cmd: 'cmd',
+      args: ['/c', 'start', '', 'Brave', url],
+    })
+  })
+
+  it('returns null when the requested browser is unavailable on the platform', () => {
+    // Safari has no application name on linux
+    expect(browserCommand(url, 'safari', 'linux')).toBeNull()
   })
 })

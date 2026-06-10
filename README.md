@@ -8,7 +8,7 @@ Lightweight live markdown preview for terminal editors. Point it at any `.md` fi
 - Live updates via SSE (~100 ms after save)
 - **Syntax highlighting** powered by Shiki using GitHub's official `github-light` / `github-dark` themes (always enabled for accurate GitHub matching)
 - Heading anchors (`id=""`) so in-page links and `#fragment` URLs work like GitHub
-- Browser opens automatically on startup (disable with `--no-open`)
+- Browser opens automatically on startup (disable with `--no-open`); choose Safari or Brave with `--browser`
 - Works fully offline — the GitHub stylesheet is bundled and served locally, not loaded from a CDN
 - Dark mode toggle (☀️/🌙) with `prefers-color-scheme` support and `localStorage` persistence
 - Sticky header showing filename + "Last updated" timestamp — stays visible while you scroll
@@ -47,6 +47,7 @@ The browser opens automatically. Edit the file in any editor — the preview upd
 | `node src/server.js <file.md>` | Start preview (defaults to port 7474) |
 | `node src/server.js <file.md> --port 8080` | Start on a specific port (`-p 8080` also works) |
 | `node src/server.js <file.md> --no-open` | Start without opening the browser |
+| `node src/server.js <file.md> --browser brave` | Open in a specific browser: `safari` or `brave` (`-b` also works) |
 | `node src/server.js --help` | Show CLI usage (`-h` also works) |
 | `PORT=8080 node src/server.js <file.md>` | Start using the `PORT` environment variable |
 
@@ -99,7 +100,7 @@ File watching uses Node's built-in `fs.watchFile` (polling, default 100 ms inter
 
 ## Tests
 
-Built with strict TDD. 41 tests across four files cover the render function, watcher behaviour, page builder output, HTTP/SSE responses, and error handling.
+Built with strict TDD. 48 tests across four files cover the render function, watcher behaviour, page builder output, HTTP/SSE responses, browser-launch command building, and error handling.
 
 ```
 tests/
