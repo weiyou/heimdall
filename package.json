@@ -3,10 +3,37 @@
   "version": "0.1.0",
   "description": "Lightweight live markdown preview with SSE",
   "type": "module",
+  "license": "MIT",
+  "author": "Wei You",
+  "bin": {
+    "heimdall": "src/cli.js"
+  },
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github:weiyou/heimdall"
+  },
+  "homepage": "https://github.com/weiyou/heimdall#readme",
+  "bugs": {
+    "url": "https://github.com/weiyou/heimdall/issues"
+  },
+  "keywords": [
+    "markdown",
+    "preview",
+    "live-reload",
+    "sse",
+    "cli",
+    "github"
+  ],
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev": "node src/server.js"
+    "dev": "node src/cli.js"
   },
   "dependencies": {
     "github-markdown-css": "^5.9.0",
