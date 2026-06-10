@@ -118,7 +118,7 @@ File watching uses Node's built-in `fs.watchFile` (polling, default 100 ms inter
 
 ## Tests
 
-Built with strict TDD. 48 tests across four files cover the render function, watcher behaviour, page builder output, HTTP/SSE responses, browser-launch command building, and error handling.
+Built with strict TDD. 50 tests across five files cover the render function, watcher behaviour, page builder output, HTTP/SSE responses, browser-launch command building, the CLI entry point, and error handling.
 
 ```
 tests/
@@ -128,4 +128,5 @@ tests/
                      callback error containment, coalescing, custom interval/persistent
   page.test.js     — HTML structure, local CSS, sticky header, single SSE handler
   server.test.js   — HTTP status codes, content-types, SSE frames, CSS/favicon routes, EADDRINUSE
+  cli.test.js      — CLI runs through a global-install symlink, --help output
 ```
