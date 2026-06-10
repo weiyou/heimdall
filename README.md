@@ -80,7 +80,13 @@ Additional UX details:
 - Render errors appear in-page; the last successfully rendered content stays on screen.
 - The server fails fast with a clear error message if the target file does not exist or the port is already in use.
 
-File watching uses Node's built-in `fs.watchFile` at 100ms polling; no native FSEvents dependency.
+File watching uses Node's built-in `fs.watchFile` (polling, default 100 ms interval, no native FSEvents dependency). The watcher has several deliberate characteristics:
+
+- No initial fire — the callback only runs on *changes* after the watcher is attached.
+- Content deduplication — identical file contents (including no-op saves, formatter round-trips, and pure metadata updates) are suppressed after the first delivery.
+- Natural coalescing — very rapid successive saves within a single poll interval are collapsed; the callback receives the final state.
+- Read errors during atomic saves (common with editors) are logged only once per failure episode; the watcher recovers automatically when the file reappears.
+- Fully configurable polling interval and `persistent` flag via the internal `watchFile` utility (advanced / testing use).
 
 ## Stack
 
@@ -93,12 +99,14 @@ File watching uses Node's built-in `fs.watchFile` at 100ms polling; no native FS
 
 ## Tests
 
-Built with strict TDD. 27 tests across four files cover the render function, watcher behaviour, page builder output, HTTP/SSE responses, and error handling.
+Built with strict TDD. 41 tests across four files cover the render function, watcher behaviour, page builder output, HTTP/SSE responses, and error handling.
 
 ```
 tests/
   render.test.js   — GFM headers + anchors, lists, code blocks, fallback, tables, empty input
-  watcher.test.js  — change fires, no initial fire, multiple successive saves
+  watcher.test.js  — change fires, no initial fire, successive saves, content dedup,
+                     metadata-only skips, read-error throttling, recovery after delete,
+                     callback error containment, coalescing, custom interval/persistent
   page.test.js     — HTML structure, local CSS, sticky header, single SSE handler
   server.test.js   — HTTP status codes, content-types, SSE frames, CSS/favicon routes, EADDRINUSE
 ```
