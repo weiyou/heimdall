@@ -3,7 +3,7 @@ import { writeFileSync, mkdtempSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { createPreviewServer } from '../src/server.js'
-import { browserCommand } from '../src/cli.js'
+import { browserCommand } from '../src/browser.js'
 
 describe('preview server', () => {
   let tmpDir, filePath, server, port, stop
