@@ -24,32 +24,50 @@ Lightweight live markdown preview for terminal editors. Point it at any `.md` fi
 
 > **Note:** rendered HTML is not sanitized. heimdall is a local tool for previewing your own files — don't point it at untrusted markdown.
 
+## Install
+
+heimdall is distributed from GitHub (not the npm registry). Requires Node.js ≥ 20.
+
+```bash
+# Install the `heimdall` command globally:
+npm install -g github:weiyou/heimdall
+heimdall path/to/file.md
+
+# …or run it once without installing:
+npx github:weiyou/heimdall path/to/file.md
+```
+
 ## Quick start
 
 ```bash
-npm install
-node src/server.js path/to/file.md
+heimdall path/to/file.md
 # or with a custom port:
-node src/server.js path/to/file.md --port 8080
+heimdall path/to/file.md --port 8080
+# pick a browser (safari or brave):
+heimdall path/to/file.md --browser brave
 # or via environment variable:
-PORT=9000 node src/server.js path/to/file.md
+PORT=9000 heimdall path/to/file.md
 # → Preview → http://localhost:7474 (or your chosen port)
 ```
 
 The browser opens automatically. Edit the file in any editor — the preview updates within ~100ms of each save. The page header shows the filename and a live "Last updated" timestamp. A dark mode toggle is available in the top-right of the header.
 
+> **From source / development:** clone the repo, run `npm install`, then use `node src/cli.js <file.md>` (or `npm run dev`) in place of the `heimdall` command.
+
 ## Commands
 
 | Command | What it does |
 |---|---|
+| `heimdall <file.md>` | Start preview (defaults to port 7474) |
+| `heimdall <file.md> --port 8080` | Start on a specific port (`-p 8080` also works) |
+| `heimdall <file.md> --no-open` | Start without opening the browser |
+| `heimdall <file.md> --browser brave` | Open in a specific browser: `safari` or `brave` (`-b` also works) |
+| `heimdall --help` | Show CLI usage (`-h` also works) |
+| `PORT=8080 heimdall <file.md>` | Start using the `PORT` environment variable |
 | `npm test` | Run the full test suite (single pass) |
 | `npm run test:watch` | Run tests in watch mode |
-| `node src/server.js <file.md>` | Start preview (defaults to port 7474) |
-| `node src/server.js <file.md> --port 8080` | Start on a specific port (`-p 8080` also works) |
-| `node src/server.js <file.md> --no-open` | Start without opening the browser |
-| `node src/server.js <file.md> --browser brave` | Open in a specific browser: `safari` or `brave` (`-b` also works) |
-| `node src/server.js --help` | Show CLI usage (`-h` also works) |
-| `PORT=8080 node src/server.js <file.md>` | Start using the `PORT` environment variable |
+
+> When running from source instead of an install, replace `heimdall` with `node src/cli.js`.
 
 The server can also be used programmatically:
 

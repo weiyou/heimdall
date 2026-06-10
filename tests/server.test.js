@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { writeFileSync, mkdtempSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { createPreviewServer, browserCommand } from '../src/server.js'
+import { createPreviewServer } from '../src/server.js'
+import { browserCommand } from '../src/cli.js'
 
 describe('preview server', () => {
   let tmpDir, filePath, server, port, stop
