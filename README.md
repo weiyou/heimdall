@@ -2,6 +2,8 @@
 
 Lightweight live markdown preview for terminal editors. Point it at any `.md` file and the page opens in your browser automatically, updating every time you save — no manual refresh, no browser extension. Rendering closely matches GitHub (syntax highlighting via Shiki + official GitHub themes, accurate line widths, and `github-markdown-css`).
 
+> **Sister app:** [heimdall-ql](https://github.com/weiyou/heimdall-ql) — a macOS Quick Look extension with the same GitHub-style rendering. Press <kbd>Space</kbd> on a `.md` file in Finder.
+
 ## Features
 
 - GitHub-flavored markdown rendered with `marked`
